@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="mlcc" type="tobinary" name="tobinary" output="screen">
+    <param name="data_path" type="string" value="$(find mlcc)/scene1/"/>
+    <param name="base_lidar" type="int" value="3"/>
+  </node>
+</launch>

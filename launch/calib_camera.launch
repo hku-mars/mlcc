@@ -1,0 +1,17 @@
+<launch>
+  <node pkg="mlcc" type="calib_camera" name="calib_camera"
+    args="$(find mlcc)/config/left.yaml
+          $(find mlcc)/config/right.yaml
+          $(find mlcc)/config/avia_stereo.yaml
+          $(find mlcc)/result"
+    output="screen"/>
+
+    <!-- distance threshold lower bound:
+    if AVIA is set as the base LiDAR: 12 in scene-2, 8 in scene-1,
+    if MID is set as the base LiDAR: 8 in scene-2, 0 in scene-1 -->
+    <param name="dis_thr_low_bound" type="int" value="12"/>
+
+    <!-- if using adaptive voxel -->
+    <param name="use_ada_voxel" type="bool" value="true"/>
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find mlcc)/rviz_cfg/rosbag.rviz"/>
+</launch>

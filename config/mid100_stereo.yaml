@@ -1,0 +1,37 @@
+%YAML:1.0
+
+BaseLiDARNumber: 1 # middle LiDAR of MID-100
+ExtLiDARNumber1: 0 # left LiDAR of MID-100
+ExtLiDARNumber2: 2 # right LiDAR of MID-100
+LiDARFilesPath: "/home/sam/catkin_ws/src/mlcc/scene2/"
+ExtrinsicNumber: 2 # total number of extrinsics to be calibrated
+
+# Initial extrinsic (usually provided by hand measurement or cad design)
+ExtrinsicMat: !!opencv-matrix
+  rows: 4
+  cols: 4
+  dt: d
+  data: [0.0,   -1.0,   0.0,    0.0,
+         0.0,  0.0,  -1.0,    0.0,
+         1.0,   0.0,    0.0,    0.0,
+         0.0,   0.0,    0.0,    1.0]
+
+# Params for Canny Edge Extraction
+Canny.gray_threshold: 15
+Canny.len_threshold: 200
+
+# Params for Voxel Cutting & Plane Fitting & Edge Extraction
+Voxel.size: 1.0
+Voxel.down_sample_size: 0.02
+Plane.min_points_size: 60
+Plane.normal_theta_min: 20
+Plane.normal_theta_max: 160
+Plane.max_size: 5
+Ransac.dis_threshold: 0.02
+Ransac.iter_num: 200
+Edge.min_dis_threshold: 0.03
+Edge.max_dis_threshold: 0.06
+
+# Params for color point clouds
+Color.dense: 1
+Color.intensity_threshold: 10

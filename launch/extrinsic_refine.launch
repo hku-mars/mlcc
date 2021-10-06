@@ -1,0 +1,42 @@
+<!-- - Please input the initial extrinsic value to ref.json in the corresponding
+scene folder, e.g., scene2/ref.json. The calibrated value will also be written
+to the same scene2/ref.json file.
+- Currently we could only refine the extrinsic of one LiDAR at each time.
+If multiple LiDARs need to be calibrated, you need to refine them one by one.
+When all extrinsic values are refined, you could paste them together to the
+ref.json file and feed them to the global optimization in next step. -->
+
+<launch>
+  <node pkg="mlcc" type="extrinsic_refine" name="extrinsic_refine" output="screen">
+    <!-- test scene -->
+    <param name="data_path" type="string" value="$(find mlcc)/scene2/"/>
+
+    <!-- optimization iteration number -->
+    <param name="max_iter" type="int" value="10"/>
+
+    <!-- base LiDAR: 0-2 is the MID from left to right, 3 is AVIA -->
+    <param name="base_lidar" type="int" value="3"/>
+
+    <!-- LiDAR to be calibrated -->
+    <param name="ref_lidar" type="int" value="0"/>
+
+    <!-- largest voxel size:
+    if AVIA is set as base LiDAR use 4, if MID is set as base LiDAR use 2 -->
+    <param name="voxel_size" type="double" value="4"/>
+
+    <!-- base LiDAR downsampling size:
+    if AVIA is set as base LiDAR use 0.4, if MID is set as base LiDAR use 0.1 -->
+    <param name="downsmp_sz_base" type="double" value="0.4"/>
+
+    <!-- LiDAR to be calibrated downsampling size:
+    if AVIA is set as base LiDAR use 0.2 (e.g., using AVIA to calibrate MID),
+    if MID is set as base LiDAR use 0.1 (e.g., MID self calibration) -->
+    <param name="downsmp_sz_ref" type="double" value="0.2"/>
+  </node>
+
+  <arg name="rviz" default="true" />
+  <group if="$(arg rviz)">
+    <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz"
+    args="-d $(find mlcc)/rviz_cfg/rosbag.rviz" />
+  </group>
+</launch>
