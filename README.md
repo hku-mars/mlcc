@@ -61,7 +61,7 @@ roslaunch mlcc global_refine.launch
 ```
 ### 3.2 LiADR-Camera Extrinsic Calibration
 ```
-roslaunch mlcc camera_calib.launch
+roslaunch mlcc calib_camera.launch
 ```
 
 ## 4. Run Your Own Data
