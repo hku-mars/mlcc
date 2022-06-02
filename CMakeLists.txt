@@ -44,6 +44,3 @@ target_link_libraries(global ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS}
 
 add_executable(calib_camera source/camera_calib.cpp)
 target_link_libraries(calib_camera ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES} ${OpenCV_LIBS})
-
-add_executable(tobinary source/tobinary.cpp)
-target_link_libraries(tobinary ${catkin_LIBRARIES} ${PCL_LIBRARIES})
