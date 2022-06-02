@@ -12,7 +12,7 @@ ref.json file and feed them to the global optimization in next step. -->
     <param name="data_path" type="string" value="$(find mlcc)/scene2/"/>
 
     <!-- optimization iteration number -->
-    <param name="max_iter" type="int" value="10"/>
+    <param name="max_iter" type="int" value="15"/>
 
     <!-- base LiDAR: 0-2 is the MID from left to right, 3 is AVIA -->
     <param name="base_lidar" type="int" value="3"/>
