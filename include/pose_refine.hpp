@@ -58,26 +58,26 @@ struct M_POINT
 
 void downsample_voxel(pcl::PointCloud<PointType>& pc, double voxel_size)
 {
-	if (voxel_size < 0.01)
+	if(voxel_size < 0.01)
 		return;
 
 	std::unordered_map<VOXEL_LOC, M_POINT> feature_map;
 	size_t pt_size = pc.size();
 
-	for (size_t i = 0; i < pt_size; i++)
+	for(size_t i = 0; i < pt_size; i++)
 	{
 		PointType &pt_trans = pc[i];
 		float loc_xyz[3];
-		for (int j = 0; j < 3; j++)
+		for(int j = 0; j < 3; j++)
 		{
 			loc_xyz[j] = pt_trans.data[j] / voxel_size;
-			if (loc_xyz[j] < 0)
+			if(loc_xyz[j] < 0)
 				loc_xyz[j] -= 1.0;
 		}
 
 		VOXEL_LOC position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1], (int64_t)loc_xyz[2]);
 		auto iter = feature_map.find(position);
-		if (iter != feature_map.end())
+		if(iter != feature_map.end())
 		{
 			iter->second.xyz[0] += pt_trans.x;
 			iter->second.xyz[1] += pt_trans.y;
@@ -100,7 +100,7 @@ void downsample_voxel(pcl::PointCloud<PointType>& pc, double voxel_size)
 	pc.resize(pt_size);
 
 	size_t i = 0;
-	for (auto iter = feature_map.begin(); iter != feature_map.end(); ++iter)
+	for(auto iter = feature_map.begin(); iter != feature_map.end(); ++iter)
 	{
 		pc[i].x = iter->second.xyz[0] / iter->second.count;
 		pc[i].y = iter->second.xyz[1] / iter->second.count;
@@ -123,7 +123,7 @@ Eigen::Quaterniond exp(const Eigen::Vector3d& omega)
 
 	double imag_factor;
 	double real_factor = cos(half_theta);
-	if (theta < SMALL_EPS)
+	if(theta < SMALL_EPS)
 	{
 		double theta_sq = theta * theta;
 		double theta_po4 = theta_sq * theta_sq;
@@ -165,12 +165,12 @@ public:
 	};
 
 	void get_center(vector_vec3d& origin_pc, int cur_frame, vector_vec3d& origin_point,
-					std::vector<int>& window_num, int filternum2use)
+                  std::vector<int>& window_num, int filternum2use)
 	{
 		size_t pt_size = origin_pc.size();
-		if (pt_size <= (size_t)filternum2use)
+		if(pt_size <= (size_t)filternum2use)
 		{
-			for (size_t i = 0; i < pt_size; i++)
+			for(size_t i = 0; i < pt_size; i++)
 			{
 				origin_point.emplace_back(origin_pc[i]);
 				window_num.emplace_back(cur_frame);
@@ -181,12 +181,12 @@ public:
 		Eigen::Vector3d center;
 		double part = 1.0 * pt_size / filternum2use;
 
-		for (int i = 0; i < filternum2use; i++)
+		for(int i = 0; i < filternum2use; i++)
 		{
 			size_t np = part * i;
 			size_t nn = part * (i + 1);
 			center.setZero();
-			for (size_t j = np; j < nn; j++)
+			for(size_t j = np; j < nn; j++)
 				center += origin_pc[j];
 
 			center = center / (nn - np);
@@ -198,11 +198,11 @@ public:
 	void push_voxel(std::vector<vector_vec3d*>& origin_pc)
 	{
 		int process_points_size = 0;
-		for (int i = 0; i < window_size; i++)
-			if (!origin_pc[i]->empty())
+		for(int i = 0; i < window_size; i++)
+			if(!origin_pc[i]->empty())
 				process_points_size++;
 
-		if (process_points_size <= 1)
+		if(process_points_size <= 1)
 			return;
 		
 		int filternum2use = 4;
@@ -211,8 +211,8 @@ public:
 		std::vector<int>* window_num = new std::vector<int>();
 		window_num->reserve(filternum2use * window_size);
 		origin_point->reserve(filternum2use * window_size);
-		for (int i = 0; i < window_size; i++)
-			if (!origin_pc[i]->empty())
+		for(int i = 0; i < window_size; i++)
+			if(!origin_pc[i]->empty())
 				get_center(*origin_pc[i], i, *origin_point, *window_num, filternum2use);
 
 		origin_points.emplace_back(origin_point);
@@ -236,26 +236,26 @@ public:
 		cv::Mat matB(jacob_len, 1, CV_64F, cv::Scalar::all(0));
 		cv::Mat matX(jacob_len, 1, CV_64F, cv::Scalar::all(0));
 
-		for (int loop = 0; loop < 20; loop++)
+		for(int loop = 0; loop < 20; loop++)
 		{
-			if (is_calc_hess)
+			if(is_calc_hess)
 				calculate_HJ(poses, ts, Hess, JacT, residual1);
 			
 			D = Hess.diagonal().asDiagonal();
 			Hess2 = Hess + u * D;
 
-			for (int j = 0; j < jacob_len; j++)
+			for(int j = 0; j < jacob_len; j++)
 			{
 				matB.at<double>(j, 0) = -JacT(j, 0);
-				for (int f = 0; f < jacob_len; f++)
+				for(int f = 0; f < jacob_len; f++)
 					matA.at<double>(j, f) = Hess2(j, f);
 			}
 			cv::solve(matA, matB, matX, cv::DECOMP_QR);
 
-			for (int j = 0; j < jacob_len; j++)
+			for(int j = 0; j < jacob_len; j++)
 				dxi(j, 0) = matX.at<double>(j, 0);
 
-			for (int i = 0; i < window_size; i++)
+			for(int i = 0; i < window_size; i++)
 			{
 				Eigen::Quaterniond q_tmp(exp(dxi.block<3, 1>(6*i, 0)) * poses[i]);
 				Eigen::Vector3d t_tmp(dxi.block<3, 1>(6*i+3, 0) + ts[i]);
@@ -271,9 +271,9 @@ public:
 			assert(!std::isnan(residual1));
 			assert(!std::isnan(residual2));
 
-			if (q > 0)
+			if(q > 0)
 			{
-				for (int i = 0; i < window_size; i++)
+				for(int i = 0; i < window_size; i++)
 					assign_qt(poses[i], ts[i], poses_temp[i], ts_temp[i]);
 				q = q / q1;
 				v = 2;
@@ -288,13 +288,13 @@ public:
 				is_calc_hess = false;
 			}
 
-			if (fabs(residual1 - residual2) < 1e-9)
+			if(fabs(residual1 - residual2) < 1e-9)
 				break;
 		}
 	}
 
 	void calculate_HJ(vector_quad& poses, vector_vec3d& ts, Eigen::MatrixXd& Hess,
-					  Eigen::VectorXd& JacT, double& residual)
+                    Eigen::VectorXd& JacT, double& residual)
 	{
 		Hess.setZero();
 		JacT.setZero();
@@ -304,7 +304,7 @@ public:
 
 		size_t voxel_size = origin_points.size();
 
-		for (size_t i = 0; i < voxel_size; i++)
+		for(size_t i = 0; i < voxel_size; i++)
 		{
 			vector_vec3d& origin_pts = *origin_points[i];
 			std::vector<int>& win_num = *window_nums[i];
@@ -316,7 +316,7 @@ public:
 			Eigen::Vector3d centor(Eigen::Vector3d::Zero());
 			Eigen::Matrix3d covMat(Eigen::Matrix3d::Zero());
 
-			for (size_t j = 0; j < pts_size; j++)
+			for(size_t j = 0; j < pts_size; j++)
 			{
 				vec_tran = poses[win_num[j]] * origin_pts[j];
 				point_xis[j] = -wedge(vec_tran);
@@ -336,12 +336,12 @@ public:
 
 			Eigen::Matrix3d U = saes.eigenvectors();
 			Eigen::Vector3d u[3];
-			for (int j = 0; j < 3; j++)
+			for(int j = 0; j < 3; j++)
 				u[j] = U.block<3, 1>(0, j);
 
 			Eigen::Matrix3d ukukT = u[0] * u[0].transpose();
 			Eigen::Vector3d vec_Jt;
-			for (size_t j = 0; j < pts_size; j++)
+			for(size_t j = 0; j < pts_size; j++)
 			{
 				pt_trans[j] = pt_trans[j] - centor;
 				vec_Jt = 2.0 / N * ukukT * pt_trans[j];
@@ -352,9 +352,9 @@ public:
 			Eigen::Matrix3d Hessian33;
 			Eigen::Matrix3d F;
 			std::vector<Eigen::Matrix3d> F_(3);
-			for (size_t j = 0; j < 3; j++)
+			for(size_t j = 0; j < 3; j++)
 			{
-				if (j == 0)
+				if(j == 0)
 				{
 					F_[j].setZero();
 					continue;
@@ -366,20 +366,20 @@ public:
 
 			Eigen::Matrix3d h33;
 			size_t rownum, colnum;
-			for (size_t j = 0; j < pts_size; j++) // for each point in voxel
+			for(size_t j = 0; j < pts_size; j++) // for each point in voxel
 			{
-				for (int f = 0; f < 3; f++)
+				for(int f = 0; f < 3; f++)
 					F.block<1, 3>(f, 0) = pt_trans[j].transpose() * F_[f];
 
 				F = U * F;
 				colnum = 6 * win_num[j];
-				for (size_t k = 0; k < pts_size; k++)
+				for(size_t k = 0; k < pts_size; k++)
 				{
 					Hessian33 = u[0] * (pt_trans[k]).transpose() * F + 
 						u[0].dot(pt_trans[k]) * F;
 
 					rownum = 6 * win_num[k];
-					if (k == j)
+					if(k == j)
 						Hessian33 += (N-1) / N * ukukT;
 					else
 						Hessian33 -= 1.0 / N * ukukT;
@@ -408,11 +408,11 @@ public:
 		Eigen::Vector3d pt_trans, new_center;
 		Eigen::Matrix3d new_A;
 
-		for (size_t i = 0; i < voxel_size; i++)
+		for(size_t i = 0; i < voxel_size; i++)
 		{
 			new_center.setZero();
 			new_A.setZero();
-			for (size_t j = 0; j < window_nums[i]->size(); j++)
+			for(size_t j = 0; j < window_nums[i]->size(); j++)
 			{
 				pt_trans = poses_[(*window_nums[i])[j]] * (*origin_points[i])[j] + 
 					ts_[(*window_nums[i])[j]];
@@ -426,18 +426,6 @@ public:
 			Eigen::Vector3d eigen_value = saes.eigenvalues();
 			residual += eigen_value(0);
 		}
-	}
-
-	void free_voxel()
-	{
-		size_t voxel_size = origin_points.size();
-		for (size_t i = 0; i < voxel_size; i++)
-		{
-			delete (origin_points[i]);
-			delete (window_nums[i]);
-		}
-		origin_points.clear();
-		window_nums.clear();
 	}
 };
 
@@ -463,10 +451,10 @@ public:
 	OCTO_TREE(int capa) : capacity(capa)
 	{
 		octo_state = END_OF_TREE;
-		for (int i = 0; i < 8; i++)
+		for(int i = 0; i < 8; i++)
 			leaves[i] = nullptr;
 
-		for (int i = 0; i < capacity; i++)
+		for(int i = 0; i < capacity; i++)
 		{
 			origin_pc.emplace_back(new vector_vec3d());
 			transform_pc.emplace_back(new vector_vec3d());
@@ -475,29 +463,29 @@ public:
 		feat_eigen_limit = 15;
 	}
 
-	~OCTO_TREE()
+	virtual ~OCTO_TREE()
 	{
-		for (int i = 0; i < capacity; i++)
+		for(int i = 0; i < capacity; i++)
 		{
 			delete (origin_pc[i]);
 			delete (transform_pc[i]);
 		}
 		origin_pc.clear();
 		transform_pc.clear();
-		for (int i = 0; i < 8; i++)
-			if (leaves[i] != nullptr)
-				leaves[i]->~OCTO_TREE();
+		for(int i = 0; i < 8; i++)
+			if(leaves[i] != nullptr)
+				delete leaves[i];
 	}
 
 	void recut(int layer, size_t frame_head)
 	{
-		if (octo_state == END_OF_TREE)
+		if(octo_state == END_OF_TREE)
 		{
 			points_size = 0;
-			for (int i = 0; i < capacity; i++)
+			for(int i = 0; i < capacity; i++)
 				points_size += origin_pc[i]->size();
 			
-			if (points_size < MIN_PS)
+			if(points_size < MIN_PS)
 			{
 				feat_eigen_ratio = -1;
 				return;
@@ -505,16 +493,16 @@ public:
 
 			calc_eigen();
 			
-			if (std::isnan(feat_eigen_ratio))
+			if(std::isnan(feat_eigen_ratio))
 			{
 				feat_eigen_ratio = -1;
 				return;
 			}
 
-			if (feat_eigen_ratio >= feat_eigen_limit)
+			if(feat_eigen_ratio >= feat_eigen_limit)
 				return;
 
-			if (layer == 4)
+			if(layer == 4)
 				return;
 
 			octo_state = NOT_TREE_END;
@@ -523,19 +511,19 @@ public:
 		int leafnum;
 		size_t pt_size;
 
-		for (int i = frame_head; i < OCTO_TREE::voxel_windowsize; i++)
+		for(int i = frame_head; i < OCTO_TREE::voxel_windowsize; i++)
 		{
 			pt_size = transform_pc[i]->size();
-			for (size_t j = 0; j < pt_size; j++)
+			for(size_t j = 0; j < pt_size; j++)
 			{
 				int xyz[3] = {0, 0, 0};
-				for (size_t k = 0; k < 3; k++)
+				for(size_t k = 0; k < 3; k++)
 				{
-					if ((*transform_pc[i])[j][k] > voxel_center[k])
+					if((*transform_pc[i])[j][k] > voxel_center[k])
 						xyz[k] = 1;
 				}
 				leafnum = 4 * xyz[0] + 2 * xyz[1] + xyz[2];
-				if (leaves[leafnum] == nullptr)
+				if(leaves[leafnum] == nullptr)
 				{
 					leaves[leafnum] = new OCTO_TREE(capacity);
 					leaves[leafnum]->voxel_center[0] =
@@ -551,17 +539,17 @@ public:
 			}
 		}
 
-		if (layer != 0)
-			for (int i = frame_head; i < OCTO_TREE::voxel_windowsize; i++)
-				if (origin_pc[i]->size() != 0)
+		if(layer != 0)
+			for(int i = frame_head; i < OCTO_TREE::voxel_windowsize; i++)
+				if(origin_pc[i]->size() != 0)
 				{
 					vector_vec3d().swap(*origin_pc[i]);
 					vector_vec3d().swap(*transform_pc[i]);
 				}
 
 		layer++;
-		for (size_t i = 0; i < 8; i++)
-			if (leaves[i] != nullptr)
+		for(size_t i = 0; i < 8; i++)
+			if(leaves[i] != nullptr)
 				leaves[i]->recut(layer, frame_head);
 	}
 
@@ -571,10 +559,10 @@ public:
 		Eigen::Vector3d center(0, 0, 0);
 
 		size_t pt_size;
-		for (int i = 0; i < capacity; i++)
+		for(int i = 0; i < capacity; i++)
 		{
 			pt_size = transform_pc[i]->size();
-			for (size_t j = 0; j < pt_size; j++)
+			for(size_t j = 0; j < pt_size; j++)
 			{
 				covMat += (*transform_pc[i])[j] * (*transform_pc[i])[j].transpose();
 				center += (*transform_pc[i])[j];
@@ -589,13 +577,13 @@ public:
 
 	void tras_display(pcl::PointCloud<pcl::PointXYZRGB>& pl_feat, int layer = 0)
 	{
-		if (octo_state != NOT_TREE_END)
+		if(octo_state != NOT_TREE_END)
 		{
 			std::vector<unsigned int> colors;
 			colors.push_back(static_cast<unsigned int>(rand() % 256));
 			colors.push_back(static_cast<unsigned int>(rand() % 256));
 			colors.push_back(static_cast<unsigned int>(rand() % 256));
-			for (int i = 0; i < capacity; i++)
+			for(int i = 0; i < capacity; i++)
 				for(uint j = 0; j < transform_pc[i]->size(); j++)
 				{
 					pcl::PointXYZRGB p;
@@ -622,26 +610,26 @@ public:
 
 	void feed_pt(LM_OPTIMIZER& lm_opt)
 	{
-		if (octo_state == END_OF_TREE)
+		if(octo_state == END_OF_TREE)
 		{
 			sw_points_size = 0;
-			for (int i = 0; i < capacity; i++)
+			for(int i = 0; i < capacity; i++)
 				sw_points_size += origin_pc[i]->size();
 			
-			if (sw_points_size < MIN_PS)
+			if(sw_points_size < MIN_PS)
 				return;
 			
 			traversal_opt_calc_eigen();
 
-			if (std::isnan(feat_eigen_ratio_test))
+			if(std::isnan(feat_eigen_ratio_test))
 				return;
 
-			if (feat_eigen_ratio_test > feat_eigen_limit)
+			if(feat_eigen_ratio_test > feat_eigen_limit)
 				lm_opt.push_voxel(origin_pc);
 		}
 		else
-			for (int i = 0; i < 8; i++)
-				if (leaves[i] != nullptr)
+			for(int i = 0; i < 8; i++)
+				if(leaves[i] != nullptr)
 					leaves[i]->feed_pt(lm_opt);
 	}
 
@@ -651,10 +639,10 @@ public:
 		Eigen::Vector3d center(0, 0, 0);
 
 		size_t pt_size;
-		for (int i = 0; i < capacity; i++)
+		for(int i = 0; i < capacity; i++)
 		{
 			pt_size = transform_pc[i]->size();
-			for (size_t j = 0; j < pt_size; j++)
+			for(size_t j = 0; j < pt_size; j++)
 			{
 				covMat += (*transform_pc[i])[j] * (*transform_pc[i])[j].transpose();
 				center += (*transform_pc[i])[j];
