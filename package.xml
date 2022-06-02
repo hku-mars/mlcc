@@ -1,8 +1,8 @@
-<?xml version="1.0"?>
+<?xml version="1.1"?>
 <package format="2">
   <name>mlcc</name>
   <version>1.0.0</version>
-  <description>The source code for paper "Fast and Accurate Extrinsic Calibration for Multiple LiDARs and Cameras".</description>
+  <description>The source code for paper "Targetless Extrinsic Calibration of Multiple Small FoV LiDARs and Cameras using Adaptive Voxelization".</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
