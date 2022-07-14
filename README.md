@@ -1,6 +1,21 @@
 # Targetless Extrinsic Calibration of Multiple Small FoV LiDARs and Cameras using Adaptive Voxelization
 
-Our journal paper is available on [IEEE TIM](https://ieeexplore.ieee.org/document/9779777). The pre-release code has been updated. Our experiment video is availalbe on [YouTube](https://youtu.be/PaiYgAXl9iY) and [Bilibili](https://www.bilibili.com/video/BV1p64y1h7ae?spm_id_from=333.999.0.0).
+Our journal paper is available on [IEEE TIM](https://ieeexplore.ieee.org/document/9779777). The pre-release code has been updated. Our experiment video is availalbe on [YouTube](https://youtu.be/PaiYgAXl9iY) and [Bilibili](https://www.bilibili.com/video/BV1p64y1h7ae?spm_id_from=333.999.0.0). Please consider citing our paper if you find our code is useful.
+
+```
+@ARTICLE{9779777,
+  author={Liu, Xiyuan and Yuan, Chongjian and Zhang, Fu},
+  journal={IEEE Transactions on Instrumentation and Measurement},
+  title={Targetless Extrinsic Calibration of Multiple Small FoV LiDARs and Cameras Using Adaptive Voxelization},
+  year={2022},
+  volume={71},
+  number={},
+  pages={1-12},
+  doi={10.1109/TIM.2022.3176889}
+}
+```
+
+[![](figure/cover.png)](https://ieeexplore.ieee.org/document/9779777)
 
 <!-- ![](figure/cover.png) -->
 
