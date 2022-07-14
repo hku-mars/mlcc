@@ -15,7 +15,7 @@ Our journal paper is available on [IEEE TIM](https://ieeexplore.ieee.org/documen
 }
 ```
 
-[![](figure/cover.png)](https://ieeexplore.ieee.org/document/9779777)
+[![](figure/cover.jpg)](https://ieeexplore.ieee.org/document/9779777)
 
 <!-- ![](figure/cover.png) -->
 
