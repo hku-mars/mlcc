@@ -300,13 +300,13 @@ public:
       {
         adaptVoxel(adapt_voxel_map, 3, 0.0025);
         debugVoxel(adapt_voxel_map);
-        down_sampling_voxel(*lidar_edge_clouds, 0.05);
+        downsample_voxel(*lidar_edge_clouds, 0.05);
       }
       else
       {
         adaptVoxel(adapt_voxel_map, 4, 0.0009);
         debugVoxel(adapt_voxel_map);
-        down_sampling_voxel(*lidar_edge_clouds, 0.02);
+        downsample_voxel(*lidar_edge_clouds, 0.02);
       }
       ROS_INFO_STREAM("Adaptive voxel sucess!");
       time_t t2 = clock();
@@ -531,7 +531,7 @@ public:
     }
     for(auto iter = voxel_map.begin(); iter != voxel_map.end(); ++iter)
     {
-      down_sampling_voxel((iter->second->temp_points_), 0.02);
+      downsample_voxel((iter->second->temp_points_), 0.02);
       iter->second->init_octo_tree();
     }
   }
@@ -806,7 +806,7 @@ public:
         }
       for(auto iter = voxel_map.begin(); iter != voxel_map.end(); iter++)
         if(iter->second->cloud->size() > 20)
-          down_sampling_voxel(*(iter->second->cloud), 0.03);
+          downsample_voxel(*(iter->second->cloud), 0.03);
     }
   }
 
@@ -1476,7 +1476,7 @@ public:
             for(size_t i = 0; i < pointIdxNKNSearch.size(); i++)
             {
               Eigen::Vector2d p(tree_cloud_cam->points[pointIdxNKNSearch[i]].x,
-                                tree_cloud_cam->points[pointIdxNKNSearch[i]].y);
+                                -tree_cloud_cam->points[pointIdxNKNSearch[i]].y);
               points_cam.push_back(p);
             }
             calcDirection(points_cam, direction_cam);
@@ -1485,7 +1485,7 @@ public:
             for(size_t i = 0; i < pointIdxNKNSearch.size(); i++)
             {
               Eigen::Vector2d p(tree_cloud_lidar->points[pointIdxNKNSearchLidar[i]].x,
-                                tree_cloud_lidar->points[pointIdxNKNSearchLidar[i]].y);
+                                -tree_cloud_lidar->points[pointIdxNKNSearchLidar[i]].y);
               points_lidar.push_back(p);
             }
             calcDirection(points_lidar, direction_lidar);
@@ -1794,7 +1794,7 @@ public:
     }
     std::cout << "lidar cloud size:" << lidar_cloud->size() << std::endl;
     lidar_cloud->points.resize(cnt);
-    // down_sampling_voxel(*lidar_cloud, 0.03);
+    // downsample_voxel(*lidar_cloud, 0.03);
     projection(extrinsic_params, cam, lidar_cloud, depth_projection_img);
     cv::Mat map_img = cv::Mat::zeros(cam.height_, cam.width_, CV_8UC3);
     for(int x = 0; x < map_img.cols; x++)

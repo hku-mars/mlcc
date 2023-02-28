@@ -1,12 +1,20 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#include <Eigen/Core>
-#include <cv_bridge/cv_bridge.h>
-#include <pcl/common/io.h>
-#include <stdio.h>
 #include <string>
+#include <stdio.h>
+#include <Eigen/Core>
 #include <unordered_map>
+#include <pcl/common/io.h>
+#include <cv_bridge/cv_bridge.h>
+
+#define MIN_PS 5
+#define SMALL_EPS 1e-10
+#define HASH_P 116101
+#define MAX_N 10000000019
+#define LAYER_LIMIT 2
+
+enum OT_STATE {UNKNOWN, MID_NODE, PLANE};
 
 struct PnPData
 {
@@ -42,42 +50,87 @@ class VOXEL_LOC
 public:
   int64_t x, y, z;
 
-  VOXEL_LOC(int64_t vx = 0, int64_t vy = 0, int64_t vz = 0) : x(vx), y(vy), z(vz) {}
+  VOXEL_LOC(int64_t vx = 0, int64_t vy = 0, int64_t vz = 0): x(vx), y(vy), z(vz) {}
 
-  bool operator==(const VOXEL_LOC &other) const
+  bool operator==(const VOXEL_LOC& other) const
   {
     return (x == other.x && y == other.y && z == other.z);
   }
 };
 
 // Hash value
-#define HASH_P 116101
-#define MAX_N 10000000000
-#define SMALL_EPS 1e-10
 namespace std
 {
-template <> struct hash<VOXEL_LOC>
-{
-  size_t operator()(const VOXEL_LOC &s) const
+  template<>
+  struct hash<VOXEL_LOC>
   {
-    using std::hash;
-    using std::size_t;
-    double cub_len = 0.125;
-    long index_x, index_y, index_z;
-    index_x = int(round(floor((s.x) / cub_len + SMALL_EPS)));
-    index_y = int(round(floor((s.y) / cub_len + SMALL_EPS)));
-    index_z = int(round(floor((s.z) / cub_len + SMALL_EPS)));
-    return (((((index_z * HASH_P) % MAX_N + index_y) * HASH_P) % MAX_N) + index_x) % MAX_N;
-  }
-};
+    size_t operator()(const VOXEL_LOC& s) const
+    {
+      using std::hash;
+      using std::size_t;
+      double cub_len = 0.125;
+      long index_x, index_y, index_z;
+      index_x = int(round(floor((s.x) / cub_len + SMALL_EPS)));
+      index_y = int(round(floor((s.y) / cub_len + SMALL_EPS)));
+      index_z = int(round(floor((s.z) / cub_len + SMALL_EPS)));
+      return (((((index_z * HASH_P) % MAX_N + index_y) * HASH_P) % MAX_N) + index_x) % MAX_N;
+    }
+  };
 } // namespace std
 
 struct M_POINT
 {
   float xyz[3];
-  float intensity;
+  // float intensity;
   int count = 0;
 };
+
+Eigen::Matrix3d wedge(const Eigen::Vector3d& v)
+{
+	Eigen::Matrix3d V;
+	V << 0, -v(2), v(1), v(2), 0, -v(0), -v(1), v(0), 0;
+	return V;
+}
+
+Eigen::Quaterniond exp(const Eigen::Vector3d& omega)
+{
+	double theta = omega.norm();
+	double half_theta = 0.5 * theta;
+
+	double imag_factor;
+	double real_factor = cos(half_theta);
+	if(theta < SMALL_EPS)
+	{
+		double theta_sq = theta * theta;
+		double theta_po4 = theta_sq * theta_sq;
+		imag_factor = 0.5 - 0.0208333 * theta_sq + 0.000260417 * theta_po4;
+	}
+	else
+	{
+		double sin_half_theta = sin(half_theta);
+		imag_factor = sin_half_theta / theta;
+	}
+
+	return Eigen::Quaterniond(real_factor, imag_factor * omega.x(),
+		                        imag_factor * omega.y(), imag_factor * omega.z());
+}
+
+void assign_qt(Eigen::Quaterniond& q, Eigen::Vector3d& t,
+               Eigen::Quaterniond& q_, Eigen::Vector3d& t_)
+{
+  q.w() = q_.w(); q.x() = q_.x(); q.y() = q_.y(); q.z() = q_.z();
+  t(0) = t_(0); t(1) = t_(1); t(2) = t_(2);
+}
+
+void assign_q(Eigen::Quaterniond& q, const Eigen::Quaterniond& q_)
+{
+  q.w() = q_.w(); q.x() = q_.x(); q.y() = q_.y(); q.z() = q_.z();
+}
+
+void assign_t(Eigen::Vector3d& t, const Eigen::Vector3d& t_)
+{
+  t(0) = t_(0); t(1) = t_(1); t(2) = t_(2);
+}
 
 double cos_angle(const Eigen::Vector3d& a, const Eigen::Vector3d& b)
 {
@@ -144,40 +197,41 @@ template <class T> void calc(T matrix[4][5], Eigen::Vector3d &solution)
 }
 
 // Similar with PCL voxelgrid filter
-void down_sampling_voxel(pcl::PointCloud<pcl::PointXYZI>& pl_feat,
-                         double voxel_size) {
+void downsample_voxel(pcl::PointCloud<pcl::PointXYZI>& pl_feat, double voxel_size)
+{
   // int intensity = rand() % 255;
-  if(voxel_size < 0.01) {
-    return;
-  }
+  if(voxel_size < 0.01) return;
+
   std::unordered_map<VOXEL_LOC, M_POINT> feat_map;
   uint plsize = pl_feat.size();
 
-  for(uint i = 0; i < plsize; i++) {
-    pcl::PointXYZI &p_c = pl_feat[i];
+  for(uint i = 0; i < plsize; i++)
+  {
+    pcl::PointXYZI& p_c = pl_feat[i];
     float loc_xyz[3];
-    for(int j = 0; j < 3; j++) {
+    for(int j = 0; j < 3; j++)
+    {
       loc_xyz[j] = p_c.data[j] / voxel_size;
-      if(loc_xyz[j] < 0) {
-        loc_xyz[j] -= 1.0;
-      }
+      if(loc_xyz[j] < 0) loc_xyz[j] -= 1.0;
     }
 
-    VOXEL_LOC position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1],
-                       (int64_t)loc_xyz[2]);
+    VOXEL_LOC position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1], (int64_t)loc_xyz[2]);
     auto iter = feat_map.find(position);
-    if(iter != feat_map.end()) {
+    if(iter != feat_map.end())
+    {
       iter->second.xyz[0] += p_c.x;
       iter->second.xyz[1] += p_c.y;
       iter->second.xyz[2] += p_c.z;
-      iter->second.intensity += p_c.intensity;
+      // iter->second.intensity += p_c.intensity;
       iter->second.count++;
-    } else {
+    }
+    else
+    {
       M_POINT anp;
       anp.xyz[0] = p_c.x;
       anp.xyz[1] = p_c.y;
       anp.xyz[2] = p_c.z;
-      anp.intensity = p_c.intensity;
+      // anp.intensity = p_c.intensity;
       anp.count = 1;
       feat_map[position] = anp;
     }
@@ -187,39 +241,42 @@ void down_sampling_voxel(pcl::PointCloud<pcl::PointXYZI>& pl_feat,
   pl_feat.resize(plsize);
 
   uint i = 0;
-  for(auto iter = feat_map.begin(); iter != feat_map.end(); ++iter) {
+  for(auto iter = feat_map.begin(); iter != feat_map.end(); ++iter)
+  {
     pl_feat[i].x = iter->second.xyz[0] / iter->second.count;
     pl_feat[i].y = iter->second.xyz[1] / iter->second.count;
     pl_feat[i].z = iter->second.xyz[2] / iter->second.count;
-    pl_feat[i].intensity = iter->second.intensity / iter->second.count;
+    // pl_feat[i].intensity = iter->second.intensity / iter->second.count;
     i++;
   }
 }
 
-void down_sampling_voxel(std::vector<Eigen::Vector3d> &pl_feat,
-                         double voxel_size) {
+void downsample_voxel(std::vector<Eigen::Vector3d>& pl_feat, double voxel_size)
+{
   std::unordered_map<VOXEL_LOC, M_POINT> feat_map;
   uint plsize = pl_feat.size();
 
-  for(uint i = 0; i < plsize; i++) {
-    Eigen::Vector3d &p_c = pl_feat[i];
+  for(uint i = 0; i < plsize; i++)
+  {
+    Eigen::Vector3d& p_c = pl_feat[i];
     double loc_xyz[3];
-    for(int j = 0; j < 3; j++) {
+    for(int j = 0; j < 3; j++)
+    {
       loc_xyz[j] = p_c[j] / voxel_size;
-      if(loc_xyz[j] < 0) {
-        loc_xyz[j] -= 1.0;
-      }
+      if(loc_xyz[j] < 0) loc_xyz[j] -= 1.0;
     }
 
-    VOXEL_LOC position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1],
-                       (int64_t)loc_xyz[2]);
+    VOXEL_LOC position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1], (int64_t)loc_xyz[2]);
     auto iter = feat_map.find(position);
-    if(iter != feat_map.end()) {
+    if(iter != feat_map.end())
+    {
       iter->second.xyz[0] += p_c[0];
       iter->second.xyz[1] += p_c[1];
       iter->second.xyz[2] += p_c[2];
       iter->second.count++;
-    } else {
+    }
+    else
+    {
       M_POINT anp;
       anp.xyz[0] = p_c[0];
       anp.xyz[1] = p_c[1];
@@ -233,13 +290,15 @@ void down_sampling_voxel(std::vector<Eigen::Vector3d> &pl_feat,
   pl_feat.resize(plsize);
 
   uint i = 0;
-  for(auto iter = feat_map.begin(); iter != feat_map.end(); ++iter) {
+  for(auto iter = feat_map.begin(); iter != feat_map.end(); ++iter)
+  {
     pl_feat[i][0] = iter->second.xyz[0] / iter->second.count;
     pl_feat[i][1] = iter->second.xyz[1] / iter->second.count;
     pl_feat[i][2] = iter->second.xyz[2] / iter->second.count;
     i++;
   }
 }
+
 void rgb2grey(const cv::Mat &rgb_image, cv::Mat &grey_img) {
   for(int x = 0; x < rgb_image.cols; x++) {
     for(int y = 0; y < rgb_image.rows; y++) {
