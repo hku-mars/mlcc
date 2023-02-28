@@ -18,11 +18,11 @@
 
 using namespace std;
 using namespace Eigen;
-double voxel_size;
+double voxel_size, eigen_thr;
 
 void cut_voxel(unordered_map<VOXEL_LOC, OCTO_TREE*>& feature_map,
                pcl::PointCloud<PointType>::Ptr feature_pts,
-               Eigen::Quaterniond q, Eigen::Vector3d t, int f_head, int capacity)
+               Eigen::Quaterniond q, Eigen::Vector3d t, int f_head, int window_size, double eigen_threshold)
 {
 	uint pt_size = feature_pts->size();
 	for(uint i = 0; i < pt_size; i++)
@@ -43,20 +43,20 @@ void cut_voxel(unordered_map<VOXEL_LOC, OCTO_TREE*>& feature_map,
 		auto iter = feature_map.find(position);
 		if(iter != feature_map.end())
 		{
-			iter->second->origin_pc[f_head]->emplace_back(pt_origin);
-			iter->second->transform_pc[f_head]->emplace_back(pt_trans);
-			iter->second->is2opt = true;
+			iter->second->origin_pc[f_head]->push_back(pt_origin);
+			iter->second->transform_pc[f_head]->push_back(pt_trans);
 		}
 		else
 		{
-			OCTO_TREE *ot = new OCTO_TREE(capacity);
-			ot->origin_pc[f_head]->emplace_back(pt_origin);
-			ot->transform_pc[f_head]->emplace_back(pt_trans);
+			OCTO_TREE* ot = new OCTO_TREE(window_size, eigen_threshold);
+			ot->origin_pc[f_head]->push_back(pt_origin);
+			ot->transform_pc[f_head]->push_back(pt_trans);
 
 			ot->voxel_center[0] = (0.5 + position.x) * voxel_size;
 			ot->voxel_center[1] = (0.5 + position.y) * voxel_size;
 			ot->voxel_center[2] = (0.5 + position.z) * voxel_size;
 			ot->quater_length = voxel_size / 4.0;
+      ot->layer = 0;
 			feature_map[position] = ot;
 		}
 	}
@@ -68,21 +68,28 @@ int main(int argc, char** argv)
   ros::NodeHandle nh("~");
 
   ros::Publisher pub_surf = nh.advertise<sensor_msgs::PointCloud2>("/map_surf", 100);
+  ros::Publisher pub_color_cloud = nh.advertise<sensor_msgs::PointCloud2>("/clour_voxel", 100);
   ros::Publisher pub_surf_debug = nh.advertise<sensor_msgs::PointCloud2>("/debug_surf", 100);
 
   string data_path;
   int max_iter, base_lidar;
-  double downsmp_sz_base;
+  double downsmp_base;
+  bool load_original = true;
 
   nh.getParam("data_path", data_path);
   nh.getParam("max_iter", max_iter);
   nh.getParam("base_lidar", base_lidar);
   nh.getParam("voxel_size", voxel_size);
-  nh.getParam("downsmp_sz_base", downsmp_sz_base);
+  nh.getParam("eigen_thr", eigen_thr);
+  nh.getParam("downsmp_base", downsmp_base);
+  nh.getParam("load_original", load_original);
 
   sensor_msgs::PointCloud2 debugMsg, colorCloudMsg;
-  vector<mypcl::pose> pose_vec = mypcl::read_pose(data_path + "original_pose/" + 
-                                                  to_string(base_lidar) + ".json");
+  vector<mypcl::pose> pose_vec;
+  if(load_original)
+    pose_vec = mypcl::read_pose(data_path + "original_pose/" + to_string(base_lidar) + ".json");
+  else
+    pose_vec = mypcl::read_pose(data_path + "pose.json");
   size_t pose_size = pose_vec.size();
   ros::Time t_begin, t_end, cur_t;
   double avg_time = 0.0;
@@ -110,23 +117,21 @@ int main(int argc, char** argv)
     unordered_map<VOXEL_LOC, OCTO_TREE*> surf_map;
     LM_OPTIMIZER lm_opt(window_size);
     cur_t = ros::Time::now();
+
     for(size_t i = 0; i < pose_size; i++)
     {
-      OCTO_TREE::voxel_windowsize = i + 1;
-      downsample_voxel(*base_pc[i], downsmp_sz_base);
-
-      cut_voxel(surf_map, base_pc[i], pose_vec[i].q, pose_vec[i].t, i, window_size);
-      for(auto iter = surf_map.begin(); iter != surf_map.end(); ++iter)
-        if(iter->second->is2opt)
-          iter->second->recut(0, i);
+      if(downsmp_base > 0) downsample_voxel(*base_pc[i], downsmp_base);
+      cut_voxel(surf_map, base_pc[i], pose_vec[i].q, pose_vec[i].t, i, window_size, eigen_thr);
     }
+
+    for(auto iter = surf_map.begin(); iter != surf_map.end(); ++iter)
+      iter->second->recut();
 
     for(int i = 0; i < window_size; i++)
       assign_qt(lm_opt.poses[i], lm_opt.ts[i], pose_vec[i].q, pose_vec[i].t);
     
     for(auto iter = surf_map.begin(); iter != surf_map.end(); ++iter)
-      if(iter->second->is2opt)
-        iter->second->feed_pt(lm_opt);
+      iter->second->feed_pt(lm_opt);
 
     lm_opt.optimize();
 
@@ -135,6 +140,7 @@ int main(int argc, char** argv)
 
     for(auto iter = surf_map.begin(); iter != surf_map.end(); ++iter)
       delete iter->second;
+    
     t_end = ros::Time::now();
     cout << "time cost " << (t_end-t_begin).toSec() << endl;
     avg_time += (t_end-t_begin).toSec();
