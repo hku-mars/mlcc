@@ -105,12 +105,12 @@ public:
       Eigen::Matrix<T, 1, 2> nt = pd.direction.transpose().cast<T>();
       Eigen::Matrix<T, 2, 2> V = n * nt;
       V = I - V;
-      Eigen::Matrix<T, 2, 2> R = Eigen::Matrix<float, 2, 2>::Zero().cast<T>();
+      Eigen::Matrix<T, 2, 1> R = Eigen::Matrix<float, 2, 1>::Zero().cast<T>();
       R.coeffRef(0, 0) = residuals[0];
-      R.coeffRef(1, 1) = residuals[1];
-      R = V * R * V.transpose();
+      R.coeffRef(1, 0) = residuals[1];
+      R = V * R;
       residuals[0] = R.coeffRef(0, 0);
-      residuals[1] = R.coeffRef(1, 1);
+      residuals[1] = R.coeffRef(1, 0);
     }
     return true;
   }

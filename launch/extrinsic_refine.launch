@@ -12,26 +12,29 @@ ref.json file and feed them to the global optimization in next step. -->
     <param name="data_path" type="string" value="$(find mlcc)/scene2/"/>
 
     <!-- optimization iteration number -->
-    <param name="max_iter" type="int" value="15"/>
+    <param name="max_iter" type="int" value="10"/>
 
     <!-- base LiDAR: 0-2 is the MID from left to right, 3 is AVIA -->
     <param name="base_lidar" type="int" value="3"/>
 
     <!-- LiDAR to be calibrated -->
-    <param name="ref_lidar" type="int" value="0"/>
+    <param name="ref_lidar" type="int" value="2"/>
 
     <!-- largest voxel size:
-    if AVIA is set as base LiDAR use 4, if MID is set as base LiDAR use 2 -->
+    if AVIA is set as base LiDAR use 4, if MID is set as base LiDAR use 4 -->
     <param name="voxel_size" type="double" value="4"/>
 
     <!-- base LiDAR downsampling size:
     if AVIA is set as base LiDAR use 0.4, if MID is set as base LiDAR use 0.1 -->
-    <param name="downsmp_sz_base" type="double" value="0.4"/>
+    <param name="downsmp_base" type="double" value="0.4"/>
 
     <!-- LiDAR to be calibrated downsampling size:
     if AVIA is set as base LiDAR use 0.2 (e.g., using AVIA to calibrate MID),
     if MID is set as base LiDAR use 0.1 (e.g., MID self calibration) -->
-    <param name="downsmp_sz_ref" type="double" value="0.2"/>
+    <param name="downsmp_ref" type="double" value="0.2"/>
+
+    <!-- 6 for AVIA in scene-1, else 10 -->
+    <param name="eigen_thr" type="double" value="10"/>
   </node>
 
   <arg name="rviz" default="true" />

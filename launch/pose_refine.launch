@@ -10,12 +10,14 @@
     <param name="base_lidar" type="int" value="3"/>
 
     <!-- largest voxel size:
-    if AVIA is set as base LiDAR use 4, if MID is set as base LiDAR use 2 -->
+    if AVIA is set as base LiDAR use 4, if MID is set as base LiDAR use 4/2 for scene-1/scene-2 -->
     <param name="voxel_size" type="double" value="4"/>
 
     <!-- base LiDAR downsampling size:
-    if AVIA is set as base LiDAR use 0.4, if MID is set as base LiDAR use 0.2 -->
-    <param name="downsmp_sz_base" type="double" value="0.4"/>
+    if AVIA is set as base LiDAR use 0.4, if MID is set as base LiDAR use 0.1 -->
+    <param name="downsmp_base" type="double" value="0.4"/>
+    <param name="load_original" type="bool" value="1"/>
+    <param name="eigen_thr" type="double" value="10"/>
   </node>
 
   <arg name="rviz" default="true" />
