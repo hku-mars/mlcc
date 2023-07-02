@@ -13,7 +13,7 @@
 #include "ros/ros.h"
 #include <sensor_msgs/PointCloud2.h>
 
-#include "mypcl.hpp"
+#include "BA/mypcl.hpp"
 #include "pose_refine.hpp"
 
 using namespace std;
@@ -68,7 +68,6 @@ int main(int argc, char** argv)
   ros::NodeHandle nh("~");
 
   ros::Publisher pub_surf = nh.advertise<sensor_msgs::PointCloud2>("/map_surf", 100);
-  ros::Publisher pub_color_cloud = nh.advertise<sensor_msgs::PointCloud2>("/clour_voxel", 100);
   ros::Publisher pub_surf_debug = nh.advertise<sensor_msgs::PointCloud2>("/debug_surf", 100);
 
   string data_path;
@@ -80,8 +79,8 @@ int main(int argc, char** argv)
   nh.getParam("max_iter", max_iter);
   nh.getParam("base_lidar", base_lidar);
   nh.getParam("voxel_size", voxel_size);
-  nh.getParam("eigen_thr", eigen_thr);
-  nh.getParam("downsmp_base", downsmp_base);
+  nh.getParam("eigen_threshold", eigen_thr);
+  nh.getParam("downsample_base", downsmp_base);
   nh.getParam("load_original", load_original);
 
   sensor_msgs::PointCloud2 debugMsg, colorCloudMsg;
@@ -96,6 +95,7 @@ int main(int argc, char** argv)
 
   pcl::PointCloud<PointType>::Ptr pc_debug(new pcl::PointCloud<PointType>);
   pcl::PointCloud<PointType>::Ptr pc_surf(new pcl::PointCloud<PointType>);
+  pcl::PointCloud<PointType>::Ptr pc_full(new pcl::PointCloud<PointType>);
 
   vector<pcl::PointCloud<PointType>::Ptr> base_pc, ref_pc;
   base_pc.resize(pose_size);
@@ -145,19 +145,18 @@ int main(int argc, char** argv)
     cout << "time cost " << (t_end-t_begin).toSec() << endl;
     avg_time += (t_end-t_begin).toSec();
 
-    Eigen::Quaterniond q0(pose_vec[0].q.w(), pose_vec[0].q.x(),
-                          pose_vec[0].q.y(), pose_vec[0].q.z());
+    Eigen::Quaterniond q0(pose_vec[0].q.w(), pose_vec[0].q.x(), pose_vec[0].q.y(), pose_vec[0].q.z());
     Eigen::Vector3d t0(pose_vec[0].t(0), pose_vec[0].t(1), pose_vec[0].t(2));
+    pc_full->clear();
     for(size_t i = 0; i < pose_size; i++)
     {
-      mypcl::transform_pointcloud(*base_pc[i], *pc_debug,
-        q0.inverse()*(pose_vec[i].t-t0), q0.inverse()*pose_vec[i].q);
-
-      pcl::toROSMsg(*pc_debug, debugMsg);
-      debugMsg.header.frame_id = "camera_init";
-      debugMsg.header.stamp = cur_t;
-      pub_surf_debug.publish(debugMsg);
+      mypcl::transform_pointcloud(*base_pc[i], *pc_debug, q0.inverse()*(pose_vec[i].t-t0), q0.inverse()*pose_vec[i].q);
+      pc_full = mypcl::append_cloud(pc_full, *pc_debug);
     }
+    pcl::toROSMsg(*pc_full, debugMsg);
+    debugMsg.header.frame_id = "camera_init";
+    debugMsg.header.stamp = cur_t;
+    pub_surf_debug.publish(debugMsg);
   }
   cout << "---------------------" << endl;
   cout << "complete" << endl;
@@ -170,8 +169,7 @@ int main(int argc, char** argv)
   for(size_t i = 0; i < pose_size; i++)
   {
     pcl::io::loadPCDFile(data_path+to_string(base_lidar)+"/"+to_string(i)+".pcd", *pc_surf);
-    mypcl::transform_pointcloud(*pc_surf, *pc_surf,
-      q0.inverse()*(pose_vec[i].t-t0), q0.inverse()*pose_vec[i].q);
+    mypcl::transform_pointcloud(*pc_surf, *pc_surf, q0.inverse()*(pose_vec[i].t-t0), q0.inverse()*pose_vec[i].q);
 
     pcl::toROSMsg(*pc_surf, colorCloudMsg);
     colorCloudMsg.header.frame_id = "camera_init";

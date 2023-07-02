@@ -12,7 +12,7 @@
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-#include "mypcl.hpp"
+#include "BA/mypcl.hpp"
 #include "common.h"
 
 class EXTRIN_OPTIMIZER

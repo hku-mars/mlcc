@@ -8,7 +8,7 @@
 #include <opencv2/imgproc.hpp>
 #include <pcl_conversions/pcl_conversions.h>
 
-#include "mypcl.hpp"
+#include "BA/mypcl.hpp"
 #include "common.h"
 
 class LM_OPTIMIZER
@@ -281,7 +281,7 @@ public:
 		residual = 0;
 		Eigen::MatrixXd _jact(JacT);
 
-		for(size_t i = head; i < end; i++)
+		for(int i = head; i < end; i++)
 		{
 			vector_vec3d& baseorigin_pts = *baseOriginPts[i];
 			std::vector<int>& basewin_num = *baseWinNums[i];
@@ -414,7 +414,7 @@ public:
 					(Hessian33 + Hessian33.transpose());
 			}
 
-			size_t rownum_s, colnum_s;
+			size_t colnum_s;
 
 			for(size_t j = 0; j < N; j++)
 			{

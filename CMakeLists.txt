@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(mlcc)
 
 set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++14")
+set(CMAKE_CXX_FLAGS "-std=c++17")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 find_package(catkin REQUIRED COMPONENTS
@@ -44,3 +44,7 @@ target_link_libraries(global ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS}
 
 add_executable(calib_camera source/camera_calib.cpp)
 target_link_libraries(calib_camera ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES} ${OpenCV_LIBS})
+
+# Calibrate Using Single Scene
+add_executable(calib_single_camera source/calib_single_camera.cpp)
+target_link_libraries(calib_single_camera ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES} ${OpenCV_LIBS})

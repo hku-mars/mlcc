@@ -1,10 +1,9 @@
-#include "calib_camera.hpp"
-#include "ceres/ceres.h"
-#include "common.h"
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-
+#include "ceres/ceres.h"
+#include "calib_camera.hpp"
+#include "common.h"
 // #define debug_mode
 
 using namespace std;
@@ -134,15 +133,13 @@ void roughCalib(Calibration &calibra, double search_resolution, int max_iter)
     {
       for(size_t a = 0; a < calibra.cams.size(); a++)
       {
-        Vector3d euler_angle = calibra.cams[a].ext_R.eulerAngles(2, 1, 0); // Z-Y-X
         Eigen::Matrix3d rot = calibra.cams[a].ext_R;
         Vector3d transation = calibra.cams[a].ext_t;
         float min_cost = 1000;
         for(int iter = 0; iter < max_iter; iter++)
         {
           Eigen::Vector3d adjust_euler = fix_adjust_euler;
-          adjust_euler[round] = fix_adjust_euler[round] +
-                                pow(-1, iter) * int(iter / 2) * search_resolution;
+          adjust_euler[round] = fix_adjust_euler[round] + pow(-1, iter) * int(iter / 2) * search_resolution;
           Eigen::Matrix3d adjust_rotation_matrix;
           adjust_rotation_matrix =
             Eigen::AngleAxisd(adjust_euler[0], Eigen::Vector3d::UnitZ()) *
@@ -151,8 +148,7 @@ void roughCalib(Calibration &calibra, double search_resolution, int max_iter)
           Eigen::Matrix3d test_rot = rot * adjust_rotation_matrix;
           Eigen::Vector3d test_euler = test_rot.eulerAngles(2, 1, 0);
           Vector6d test_params;
-          test_params << test_euler[0], test_euler[1], test_euler[2],
-                          transation[0], transation[1], transation[2];
+          test_params << test_euler[0], test_euler[1], test_euler[2], transation[0], transation[1], transation[2];
           std::vector<VPnPData> pnp_list;
           calibra.buildVPnp(calibra.cams[a], test_params, match_dis,
                             false, calibra.cams[a].rgb_edge_clouds,
@@ -177,7 +173,7 @@ void roughCalib(Calibration &calibra, double search_resolution, int max_iter)
                   Eigen::AngleAxisd(test_params[2], Eigen::Vector3d::UnitX());
             calibra.cams[a].update_Rt(rot, transation);
             calibra.buildVPnp(calibra.cams[a], test_params, match_dis,
-                              false, calibra.cams[a].rgb_edge_clouds,
+                              true, calibra.cams[a].rgb_edge_clouds,
                               calibra.lidar_edge_clouds, pnp_list);
             // cv::Mat projection_img = calibra.getProjectionImg(test_params, a, 0);
             // std::string img_name = std::to_string(a) + "_projection";
@@ -196,9 +192,11 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
 
   int dis_thr_low_bound;
-  bool use_ada_voxel;
-  nh.getParam("dis_thr_low_bound", dis_thr_low_bound);
-  nh.getParam("use_ada_voxel", use_ada_voxel);
+  bool use_adaptive_voxel, use_rough_calib;
+
+  nh.getParam("distance_threshold_lower_bound", dis_thr_low_bound);
+  nh.getParam("use_adaptive_voxel", use_adaptive_voxel);
+  nh.getParam("use_rough_calib", use_rough_calib);
 
   const string LeftCamCfgPath = string(argv[1]);
   const string RightCamCfgPath = string(argv[2]);
@@ -209,8 +207,8 @@ int main(int argc, char **argv)
   vector<string> CamCfgPaths;
   CamCfgPaths.emplace_back(LeftCamCfgPath);
   CamCfgPaths.emplace_back(RightCamCfgPath);
-  Calibration calib(CamCfgPaths, CalibSettingPath, use_ada_voxel);
-  // roughCalib(calib, DEG2RAD(0.1), 30);
+  Calibration calib(CamCfgPaths, CalibSettingPath, use_adaptive_voxel);
+  if(use_rough_calib) roughCalib(calib, DEG2RAD(0.1), 30);
 
   /* calibration process */
   int iter = 0;
@@ -219,14 +217,12 @@ int main(int argc, char **argv)
   {
     cout << "Iteration:" << iter++ << " Distance:" << dis_threshold << endl;
     for(int cnt = 0; cnt < 2; cnt++)
-    {
       for(size_t a = 0; a < calib.cams.size(); a++)
       {
         Eigen::Vector3d euler_angle = calib.cams[a].ext_R.eulerAngles(2, 1, 0); // 2 is z, 0 is x
         Eigen::Vector3d transation = calib.cams[a].ext_t;
         Vector6d calib_params;
-        calib_params << euler_angle(0), euler_angle(1), euler_angle(2),
-                        transation(0), transation(1), transation(2);
+        calib_params << euler_angle(0), euler_angle(1), euler_angle(2), transation(0), transation(1), transation(2);
         vector<VPnPData> vpnp_list;
         Eigen::Matrix3d R;
         Eigen::Vector3d T;
@@ -236,7 +232,7 @@ int main(int argc, char **argv)
                  calib.cams[a].fy_, calib.cams[a].cy_, 0.0, 0.0, 1.0;
         distor << calib.cams[a].k1_, calib.cams[a].k2_, calib.cams[a].p1_, calib.cams[a].p2_;
 
-        calib.buildVPnp(calib.cams[a], calib_params, dis_threshold, false,
+        calib.buildVPnp(calib.cams[a], calib_params, dis_threshold, true,
                         calib.cams[a].rgb_edge_clouds, calib.lidar_edge_clouds, vpnp_list);
 
         Eigen::Quaterniond q(R);
@@ -246,8 +242,7 @@ int main(int argc, char **argv)
         Eigen::Map<Eigen::Quaterniond> m_q = Eigen::Map<Eigen::Quaterniond>(ext);
         Eigen::Map<Eigen::Vector3d> m_t = Eigen::Map<Eigen::Vector3d>(ext + 4);
 
-        ceres::LocalParameterization* q_parameterization =
-          new ceres::EigenQuaternionParameterization();
+        ceres::LocalParameterization* q_parameterization = new ceres::EigenQuaternionParameterization();
         ceres::Problem problem;
         problem.AddParameterBlock(ext, 4, q_parameterization);
         problem.AddParameterBlock(ext + 4, 3);
@@ -270,10 +265,8 @@ int main(int argc, char **argv)
         #endif
 
         calib.cams[a].update_Rt(m_q.toRotationMatrix(), m_t);
-        vpnp_list.clear();
+        vector<VPnPData>().swap(vpnp_list);
       }
-    }
-    cout << endl;
   }
   ros::Time end_t = ros::Time::now();
   cout << "time taken " << (end_t-begin_t).toSec() << endl;
@@ -308,7 +301,7 @@ int main(int argc, char **argv)
          -0.00355875044729421, 4.12974252036677e-05, 0.999993666774833;
   Matrix3d R_;
   R_ = Rgt.inverse() * (calib.cams[1].ext_R * calib.cams[0].ext_R.inverse());
-  Vector3d t_e = R_.eulerAngles(0, 1, 2);
+  // Vector3d t_e = R_.eulerAngles(0, 1, 2);
   // cout << "Euler " << t_e.transpose() * 57.3 << endl;
   Eigen::Quaterniond q2(Rgt.transpose());
   Eigen::Quaterniond qme(calib.cams[1].ext_R * calib.cams[0].ext_R.inverse());
@@ -323,7 +316,7 @@ int main(int argc, char **argv)
   Vector6d calib_params;
   calib_params << euler_angle(0), euler_angle(1), euler_angle(2),
                   transation(0), transation(1), transation(2);
-  calib.colorCloud(calib_params, 5, calib.cams[0], calib.cams[0].rgb_imgs, calib.base_clouds);
+  calib.colorCloud(calib_params, 1, calib.cams[0], calib.cams[0].rgb_imgs, calib.base_clouds);
 
   while(ros::ok())
   {
@@ -334,7 +327,7 @@ int main(int argc, char **argv)
     Vector6d calib_params;
     calib_params << euler_angle(0), euler_angle(1), euler_angle(2),
                     transation(0), transation(1), transation(2);
-    calib.colorCloud(calib_params, 5, calib.cams[0], calib.cams[0].rgb_imgs, calib.base_clouds);
+    calib.colorCloud(calib_params, 1, calib.cams[0], calib.cams[0].rgb_imgs, calib.base_clouds);
   }
   return 0;
 }

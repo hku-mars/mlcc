@@ -12,8 +12,9 @@
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-#include "mypcl.hpp"
 #include "common.h"
+#include "BA/mypcl.hpp"
+#include "BA/tools.hpp"
 
 class LM_OPTIMIZER
 {

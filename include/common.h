@@ -8,11 +8,11 @@
 #include <pcl/common/io.h>
 #include <cv_bridge/cv_bridge.h>
 
-#define MIN_PS 5
+#define MIN_PS 15
+#define LAYER_LIMIT 3
 #define SMALL_EPS 1e-10
 #define HASH_P 116101
 #define MAX_N 10000000019
-#define LAYER_LIMIT 2
 
 enum OT_STATE {UNKNOWN, MID_NODE, PLANE};
 
@@ -45,45 +45,22 @@ typedef struct SinglePlane
   int index;
 } SinglePlane;
 
-class VOXEL_LOC
+typedef struct Plane
 {
-public:
-  int64_t x, y, z;
-
-  VOXEL_LOC(int64_t vx = 0, int64_t vy = 0, int64_t vz = 0): x(vx), y(vy), z(vz) {}
-
-  bool operator==(const VOXEL_LOC& other) const
-  {
-    return (x == other.x && y == other.y && z == other.z);
-  }
-};
-
-// Hash value
-namespace std
-{
-  template<>
-  struct hash<VOXEL_LOC>
-  {
-    size_t operator()(const VOXEL_LOC& s) const
-    {
-      using std::hash;
-      using std::size_t;
-      double cub_len = 0.125;
-      long index_x, index_y, index_z;
-      index_x = int(round(floor((s.x) / cub_len + SMALL_EPS)));
-      index_y = int(round(floor((s.y) / cub_len + SMALL_EPS)));
-      index_z = int(round(floor((s.z) / cub_len + SMALL_EPS)));
-      return (((((index_z * HASH_P) % MAX_N + index_y) * HASH_P) % MAX_N) + index_x) % MAX_N;
-    }
-  };
-} // namespace std
-
-struct M_POINT
-{
-  float xyz[3];
-  // float intensity;
-  int count = 0;
-};
+  pcl::PointXYZINormal p_center;
+  Eigen::Vector3d center;
+  Eigen::Vector3d normal;
+  Eigen::Matrix3d covariance;
+  std::vector<Eigen::Vector3d> plane_points;
+  float radius = 0;
+  float min_eigen_value = 1;
+  float d = 0;
+  int points_size = 0;
+  bool is_plane = false;
+  bool is_init = false;
+  int id;
+  bool is_update = false;
+} Plane;
 
 Eigen::Matrix3d wedge(const Eigen::Vector3d& v)
 {
@@ -193,109 +170,6 @@ template <class T> void calc(T matrix[4][5], Eigen::Vector3d &solution)
     solution[1] = 0;
     solution[2] = 0;
     //        return DBL_MIN;
-  }
-}
-
-// Similar with PCL voxelgrid filter
-void downsample_voxel(pcl::PointCloud<pcl::PointXYZI>& pl_feat, double voxel_size)
-{
-  // int intensity = rand() % 255;
-  if(voxel_size < 0.01) return;
-
-  std::unordered_map<VOXEL_LOC, M_POINT> feat_map;
-  uint plsize = pl_feat.size();
-
-  for(uint i = 0; i < plsize; i++)
-  {
-    pcl::PointXYZI& p_c = pl_feat[i];
-    float loc_xyz[3];
-    for(int j = 0; j < 3; j++)
-    {
-      loc_xyz[j] = p_c.data[j] / voxel_size;
-      if(loc_xyz[j] < 0) loc_xyz[j] -= 1.0;
-    }
-
-    VOXEL_LOC position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1], (int64_t)loc_xyz[2]);
-    auto iter = feat_map.find(position);
-    if(iter != feat_map.end())
-    {
-      iter->second.xyz[0] += p_c.x;
-      iter->second.xyz[1] += p_c.y;
-      iter->second.xyz[2] += p_c.z;
-      // iter->second.intensity += p_c.intensity;
-      iter->second.count++;
-    }
-    else
-    {
-      M_POINT anp;
-      anp.xyz[0] = p_c.x;
-      anp.xyz[1] = p_c.y;
-      anp.xyz[2] = p_c.z;
-      // anp.intensity = p_c.intensity;
-      anp.count = 1;
-      feat_map[position] = anp;
-    }
-  }
-  plsize = feat_map.size();
-  pl_feat.clear();
-  pl_feat.resize(plsize);
-
-  uint i = 0;
-  for(auto iter = feat_map.begin(); iter != feat_map.end(); ++iter)
-  {
-    pl_feat[i].x = iter->second.xyz[0] / iter->second.count;
-    pl_feat[i].y = iter->second.xyz[1] / iter->second.count;
-    pl_feat[i].z = iter->second.xyz[2] / iter->second.count;
-    // pl_feat[i].intensity = iter->second.intensity / iter->second.count;
-    i++;
-  }
-}
-
-void downsample_voxel(std::vector<Eigen::Vector3d>& pl_feat, double voxel_size)
-{
-  std::unordered_map<VOXEL_LOC, M_POINT> feat_map;
-  uint plsize = pl_feat.size();
-
-  for(uint i = 0; i < plsize; i++)
-  {
-    Eigen::Vector3d& p_c = pl_feat[i];
-    double loc_xyz[3];
-    for(int j = 0; j < 3; j++)
-    {
-      loc_xyz[j] = p_c[j] / voxel_size;
-      if(loc_xyz[j] < 0) loc_xyz[j] -= 1.0;
-    }
-
-    VOXEL_LOC position((int64_t)loc_xyz[0], (int64_t)loc_xyz[1], (int64_t)loc_xyz[2]);
-    auto iter = feat_map.find(position);
-    if(iter != feat_map.end())
-    {
-      iter->second.xyz[0] += p_c[0];
-      iter->second.xyz[1] += p_c[1];
-      iter->second.xyz[2] += p_c[2];
-      iter->second.count++;
-    }
-    else
-    {
-      M_POINT anp;
-      anp.xyz[0] = p_c[0];
-      anp.xyz[1] = p_c[1];
-      anp.xyz[2] = p_c[2];
-      anp.count = 1;
-      feat_map[position] = anp;
-    }
-  }
-
-  plsize = feat_map.size();
-  pl_feat.resize(plsize);
-
-  uint i = 0;
-  for(auto iter = feat_map.begin(); iter != feat_map.end(); ++iter)
-  {
-    pl_feat[i][0] = iter->second.xyz[0] / iter->second.count;
-    pl_feat[i][1] = iter->second.xyz[1] / iter->second.count;
-    pl_feat[i][2] = iter->second.xyz[2] / iter->second.count;
-    i++;
   }
 }
 

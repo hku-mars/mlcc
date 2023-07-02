@@ -8,6 +8,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <Eigen/Dense>
+#include <Eigen/StdVector>
+
+#include "BA/tools.hpp"
 
 typedef std::vector<Eigen::Vector3d, Eigen::aligned_allocator<Eigen::Vector3d> > vector_vec3d;
 typedef std::vector<Eigen::Quaterniond, Eigen::aligned_allocator<Eigen::Quaterniond> > vector_quad;
@@ -46,7 +49,7 @@ namespace mypcl
     file.close();
     return pose_vec;
   }
-
+  
   void transform_pointcloud(pcl::PointCloud<PointType> const& pc_in,
                             pcl::PointCloud<PointType>& pt_out,
                             Eigen::Vector3d t,
