@@ -48,7 +48,7 @@ source ~/catkin_ws/devel/setup.bash
 ```
 
 ## 3. Run Our Example
-The parameters base LiDAR (`AVIA` or `MID`), test scene (`scene-1` or `scene-2`), `adaptive_voxel_size`, etc., could be modified in the corresponding launch file.
+The parameters base LiDAR (`AVIA` or `MID`), test scene (`scene-1` or `scene-2`), `adaptive_voxel_size`, etc., could be modified in the corresponding launch file. We also provide the original rosbag files ([scene-1](https://connecthkuhk-my.sharepoint.com/:u:/g/personal/xliuaa_connect_hku_hk/EUUaPzF8UcNPvv6DSnqAZzgBH_6T4SzgfbcFSathbiKF1g?e=DCewYe) and [scene-2](https://connecthkuhk-my.sharepoint.com/:u:/g/personal/xliuaa_connect_hku_hk/Eaph-4KFshtLtsn0OFzicAEB_g5Z5mB_SMNYySRqeVvQMw?e=Yhnj3N)) for your reference.
 ### 3.1 Multi-LiDAR Extrinsic Calibration
 <!-- ![](figure/workflow.jpg) -->
 Step 1: base LiDAR pose optimization (the initial pose is stored in `scene-x/original_pose`)
