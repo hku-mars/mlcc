@@ -1,6 +1,6 @@
 # Targetless Extrinsic Calibration of Multiple Small FoV LiDARs and Cameras using Adaptive Voxelization
 
-Our journal paper is available on [IEEE TIM](https://ieeexplore.ieee.org/document/9779777). The pre-release code has been updated. Our experiment video is availalbe on [YouTube](https://youtu.be/PaiYgAXl9iY) and [Bilibili](https://www.bilibili.com/video/BV1p64y1h7ae?spm_id_from=333.999.0.0). Please consider citing our paper if you find our code is useful.
+Our journal paper is available on [IEEE TIM](https://ieeexplore.ieee.org/document/9779777). The pre-release code has been updated. Our experiment video is available on [YouTube](https://youtu.be/PaiYgAXl9iY) and [Bilibili](https://www.bilibili.com/video/BV1p64y1h7ae?spm_id_from=333.999.0.0). Please consider citing our paper if you find our code useful.
 
 ```
 @ARTICLE{9779777,
@@ -32,7 +32,7 @@ In both LiDAR-LiDAR and LiDAR-camera extrinsic calibration, we implement adaptiv
 Fig. 2 Adaptive voxelization in LiDAR-LiDAR extrinsic calibration.
 
 ![](figure/camera_voxel.png)
-Fig. 3 Adaptive voxelization in LiDAR-camera extrinsic calibration. A) real world image. B) raw point cloud of this scene. C) voxelization of [previous work](https://ieeexplore.ieee.org/document/9495137?source=authoralert) where the yellow circles indicate the false edge estimation. D) edges extracted with our proposed method.
+Fig. 3 Adaptive voxelization in LiDAR-camera extrinsic calibration. A) real-world image. B) raw point cloud of this scene. C) voxelization of [previous work](https://ieeexplore.ieee.org/document/9495137?source=authoralert) where the yellow circles indicate the false edge estimation. D) edges extracted with our proposed method.
 
 ## 1. Prerequisites
 Our code has been tested on `Ubuntu 16.04` with `ROS Kinetic`, `Ubuntu 18.04` with `ROS Melodic` and `Ubuntu 20.04` with `ROS Noetic`, [Ceres Solver 1.14.x](https://github.com/ceres-solver/ceres-solver), [OpenCV 3.4.14](https://github.com/opencv/opencv), [Eigen 3.3.7](https://gitlab.com/libeigen/eigen), [PCL 1.8](https://github.com/PointCloudLibrary/pcl).
@@ -71,21 +71,21 @@ roslaunch mlcc calib_camera.launch
 ```
 
 ### 3.3 Single LiDAR-Camera Calibration
-We have added code for single LiDAR-camera extrinsic calibration using adaptive voxelization, which supports both `pinhole` and `fisheye` camera model. The `FISHEYE` macro is defined in `calib_single_camera.hpp`. You can try our provided fisheye camera [data](https://connecthkuhk-my.sharepoint.com/:u:/g/personal/xliuaa_connect_hku_hk/EdDooAUAo71JrR3Jnx53z-YBV8Z9xrZXxxKpYHz6iAzfFw?e=hcgbVX).
+We have added code for single LiDAR-camera extrinsic calibration using adaptive voxelization, which supports both `pinhole` and `fisheye` camera models. The `FISHEYE` macro is defined in `calib_single_camera.hpp`. You can try our provided fisheye camera [data](https://drive.google.com/drive/folders/1fpk-eDX5nCi7UkkYKialHD-fgGdUGelk?usp=sharing).
 ```
 roslaunch mlcc calib_single_camera.launch
 ```
 
 ![](figure/fisheye_cloud.jpg)
-Fig. 4 Extrinsic calibration of fisheye camera and LiDAR in a single scene using adaptive voxelization. Left: distorted image. Right: colorized point cloud.
+Fig. 4 Extrinsic calibration of the fisheye camera and LiDAR in a single scene using adaptive voxelization. Left: distorted image. Right: colorized point cloud.
 
 ## 4. Run Your Own Data
-To test on your own data, you need to save the LiDAR point cloud in `.pcd` format. Please only collect the point cloud and images when the LiDAR (sensor platform) is not moving for the optimal precision (or segment them from a complete rosbag). The base LiDAR poses and initial extrinsic values shall also be provided (in `tx ty tz qw qx qy qz` format). These initial values could be obtained by general SLAM and hand-eye calibration algorithms.
+To test on your own data, you need to save the LiDAR point cloud in `.pcd` format. Please only collect the point cloud and images when the LiDAR (sensor platform) is not moving for optimal precision (or segment them from a complete rosbag). The base LiDAR poses and initial extrinsic values shall also be provided (in `tx ty tz qw qx qy qz` format). These initial values could be obtained by general SLAM and hand-eye calibration algorithms.
 
-You may need to modify the parameters `voxel_size` (adaptive voxel size), `feat_eigen_limit` (feature eigen ratio) and `downsmp_sz_base` (downsampling size) for LiDAR-LiDAR extrinsic calibration to adjust the precision and speed. You need to change the corresponding path and topic name in the yaml files in the `config` folder.
+You may need to modify the parameters `voxel_size` (adaptive voxel size), `feat_eigen_limit` (feature eigen ratio), and `downsmp_sz_base` (downsampling size) for LiDAR-LiDAR extrinsic calibration to adjust the precision and speed. You need to change the corresponding path and topic name in the yaml files in the `config` folder.
 
 ## 5. Known Issues
-Currently, we seperate the LiDAR extrinsic calibration process into three steps for debug reasons. In future release, we wish to combine them together to make it more convenient to use.
+Currently, we separate the LiDAR extrinsic calibration process into three steps for debug reasons. In future release, we wish to combine them together to make them more convenient to use.
 
 ## 6. License
 The source code is released under [GPLv2](http://www.gnu.org/licenses/) license.
